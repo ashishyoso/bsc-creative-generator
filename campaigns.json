@@ -1,0 +1,37 @@
+{
+  "FBT": {
+    "name": "Full Body Trimmer — Special Edition",
+    "productSlug": "full-body-trimmer-spl-edition",
+    "productImages": {
+      "primary": "8.png",
+      "kit": "9.png",
+      "texture": "6.webp",
+      "attachments": "4.webp"
+    },
+    "defaultAspectRatio": "9:16",
+    "defaultResolution": "2K",
+    "inspirationFolder": "ads/FBT_campaign/Inspiration",
+    "designStylePath": "ads/FBT_campaign/design_style.md",
+    "systemPromptExtra": "FBT is a PREMIUM product. Use dark gradient backgrounds only. Runtime is 90 minutes (the '99' on the LED display is battery percentage, NOT runtime). PRODUCT ACCURACY IS NON-NEGOTIABLE: The product has a specific shape — chrome upper section transitioning to matte black lower body, oval LED display, circular metallic power button, orange accent ring at head base, T-blade on top, and the logo 'BOMBAY SHAVING COMPANY' in stacked white text on the chrome section. The travel case is a black hard-shell zippered case with 'BOMBAY SHAVING COMPANY' in white stacked text. DO NOT invent a different product or case design. Copy the reference images exactly."
+  },
+  "3_FOR_999": {
+    "name": "3 for 999 Combo",
+    "productSlug": "",
+    "productImages": {},
+    "defaultAspectRatio": "1:1",
+    "defaultResolution": "2K",
+    "inspirationFolder": "",
+    "designStylePath": "",
+    "systemPromptExtra": "Value combo offer. Show multiple products together. Price must be prominent. Urgency-driven copy."
+  },
+  "18HR_SALE": {
+    "name": "18 Hour Flash Sale",
+    "productSlug": "",
+    "productImages": {},
+    "defaultAspectRatio": "9:16",
+    "defaultResolution": "2K",
+    "inspirationFolder": "",
+    "designStylePath": "",
+    "systemPromptExtra": "Flash sale urgency. Countdown energy. Bold price drops. Dark backgrounds with neon/glow accents."
+  }
+}

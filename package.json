@@ -1,0 +1,19 @@
+{
+  "name": "nano-banana-image-generator",
+  "version": "1.0.0",
+  "description": "Batch image generator using Google Gemini Nano Banana Pro API",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "archiver": "^7.0.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5"
+  }
+}

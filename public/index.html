@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BSC Creative Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <h1>BSC Creative Generator</h1>
+      <p class="subtitle">Select a campaign, add references or prompts, generate creatives</p>
+    </header>
+
+    <!-- Step 1: Campaign + Settings -->
+    <section class="settings-bar">
+      <div class="setting" style="flex:1.5">
+        <label for="campaignSelect">Campaign</label>
+        <select id="campaignSelect">
+          <option value="">— Select Campaign —</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="apiKey">API Key</label>
+        <input type="password" id="apiKey" placeholder="Gemini API key" />
+      </div>
+      <div class="setting">
+        <label for="model">Model</label>
+        <select id="model">
+          <option value="gemini-3-pro-image-preview">Nano Banana Pro (Best)</option>
+          <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (Fast)</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="aspectRatio">Aspect Ratio</label>
+        <select id="aspectRatio">
+          <option value="9:16">9:16 (Story)</option>
+          <option value="4:5">4:5 (Feed)</option>
+          <option value="1:1">1:1 (Square)</option>
+          <option value="16:9">16:9 (Landscape)</option>
+          <option value="2:3">2:3 (Pinterest)</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="concurrency">Parallel Jobs</label>
+        <select id="concurrency">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Step 2: Product Images (auto-loaded from campaign) -->
+    <section id="productSection" class="product-section hidden">
+      <div class="section-header">
+        <h3>Product Images <span class="auto-tag">Auto-loaded from campaign</span></h3>
+      </div>
+      <div id="productImagePreview" class="product-image-preview"></div>
+    </section>
+
+    <!-- Step 3: Reference / Inspiration Images -->
+    <section id="referenceSection" class="reference-section hidden">
+      <div class="section-header">
+        <h3>Reference Images</h3>
+        <p class="section-hint">Upload your own references or pick from campaign inspirations</p>
+      </div>
+
+      <!-- Upload reference -->
+      <div class="reference-upload-area" id="referenceUploadArea">
+        <span class="file-icon">🖼️</span>
+        <p>Drag & drop reference images or click to browse</p>
+        <input type="file" id="referenceInput" accept="image/*" multiple hidden />
+      </div>
+      <div id="referencePreview" class="reference-preview hidden"></div>
+
+      <!-- Generate from reference only (no prompt needed) -->
+      <div id="refGenerateBar" class="ref-generate-bar hidden">
+        <button id="btnGenerateFromRef" class="btn btn-primary">Generate from References (1 image per reference)</button>
+        <span id="refGenerateStatus" class="expand-status"></span>
+      </div>
+
+      <!-- Inspiration browser -->
+      <div id="inspirationBrowser" class="inspiration-browser hidden">
+        <div class="inspiration-header">
+          <h4>Campaign Inspirations</h4>
+          <span id="inspirationCount" class="text-dim"></span>
+        </div>
+        <div id="inspirationGrid" class="inspiration-grid"></div>
+      </div>
+    </section>
+
+    <!-- Step 4: Prompts -->
+    <section class="input-section">
+      <div class="input-tabs">
+        <button class="tab active" data-tab="brief">Upload Brief</button>
+        <button class="tab" data-tab="textarea">Direct Prompts</button>
+        <button class="tab" data-tab="file">Prompt File</button>
+      </div>
+
+      <!-- Tab 1: Brief Upload -->
+      <div class="tab-content active" id="tab-brief">
+        <input type="text" id="productDesc" class="product-desc-input" placeholder="Product description for AI brief expansion (e.g. 'BSC Full Body Trimmer SE, metallic chrome, 5 magnetic heads, LED display, travel case')" />
+        <div class="file-drop" id="briefDrop">
+          <div class="file-drop-content">
+            <span class="file-icon">📋</span>
+            <p>Upload creative brief (.xlsx, .csv)</p>
+            <p class="file-hint">Columns: Concept Name, Headline, Visual Direction, Ratio, etc.</p>
+          </div>
+          <input type="file" id="briefFileInput" accept=".csv,.xlsx,.xls" hidden />
+        </div>
+        <div id="briefStatus" class="file-status hidden"></div>
+        <div id="briefTable" class="brief-table-wrap hidden"></div>
+        <div class="action-bar" id="briefActions" style="display:none">
+          <button id="btnExpandBrief" class="btn btn-primary">Step 1: Generate Prompts from Brief</button>
+          <span id="expandStatus" class="expand-status"></span>
+        </div>
+      </div>
+
+      <!-- Tab 2: Direct Prompts -->
+      <div class="tab-content" id="tab-textarea">
+        <textarea id="promptText" rows="10" placeholder="One prompt per line. Format: prompt | aspect_ratio | resolution&#10;&#10;Example:&#10;Product hero on dark background with rim lighting, headline METAL BODY | 9:16 | 2K&#10;Flat-lay kit shot with all attachments | 4:5 | 2K"></textarea>
+        <div class="prompt-count">Prompts: <span id="promptCount">0</span></div>
+      </div>
+
+      <!-- Tab 3: Prompt File -->
+      <div class="tab-content" id="tab-file">
+        <div class="file-drop" id="fileDrop">
+          <div class="file-drop-content">
+            <span class="file-icon">📄</span>
+            <p>Drag & drop a prompt file here or click to browse</p>
+            <p class="file-hint">Supports .csv, .xlsx, .xls, .txt, .md</p>
+          </div>
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.txt,.md" hidden />
+        </div>
+        <div id="fileStatus" class="file-status hidden"></div>
+      </div>
+
+      <!-- Prompt preview -->
+      <div id="promptPreview" class="prompt-preview hidden">
+        <div class="prompt-preview-header">
+          <h4>Generated Prompts</h4>
+          <span id="promptPreviewCount" class="prompt-count"></span>
+        </div>
+        <textarea id="promptText2" rows="8" readonly></textarea>
+      </div>
+
+      <div class="action-bar">
+        <button id="btnGenerate" class="btn btn-primary">Generate All Images</button>
+        <button id="btnStop" class="btn btn-danger hidden">Stop</button>
+        <button id="btnClear" class="btn btn-secondary">Clear All</button>
+      </div>
+    </section>
+
+    <!-- Progress -->
+    <section id="progressSection" class="progress-section hidden">
+      <div class="progress-header">
+        <span id="progressText">Generating...</span>
+        <span id="progressNumbers">0 / 0</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-stats">
+        <span id="statSuccess" class="stat stat-success">✓ 0</span>
+        <span id="statFailed" class="stat stat-failed">✗ 0</span>
+        <span id="statTime" class="stat">⏱ 0s</span>
+      </div>
+    </section>
+
+    <!-- Gallery -->
+    <section id="gallerySection" class="gallery-section hidden">
+      <div class="gallery-header">
+        <h2>Generated Images</h2>
+        <div class="gallery-actions">
+          <button id="btnSelectAll" class="btn btn-sm">Select All</button>
+          <button id="btnDeselectAll" class="btn btn-sm">Deselect All</button>
+          <button id="btnDownloadSelected" class="btn btn-sm btn-primary">Download Selected</button>
+          <button id="btnDownloadAll" class="btn btn-sm btn-primary">Download All (ZIP)</button>
+        </div>
+      </div>
+      <div class="gallery-grid" id="galleryGrid"></div>
+    </section>
+  </div>
+
+  <!-- Image Preview Modal -->
+  <div class="modal hidden" id="imageModal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <img id="modalImage" src="" alt="Preview" />
+      <div class="modal-info">
+        <p id="modalPrompt"></p>
+        <button id="modalDownload" class="btn btn-primary">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

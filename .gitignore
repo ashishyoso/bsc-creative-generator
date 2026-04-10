@@ -1,0 +1,7 @@
+node_modules/
+.env
+output/
+Products/
+*.ini
+.claude/
+bsc-text-animation/
