@@ -117,13 +117,14 @@ function resolveProductFolder(campaign) {
   return null;
 }
 
-function resolveInspirationFolder(campaign) {
-  if (!campaign.inspirationFolder) return null;
+function resolveInspirationFolder(campaignId, campaign) {
+  if (!campaign.inspirationFolder && !campaignId) return null;
   // Try local BSC workspace first
-  const localPath = path.join(BSC_ROOT, campaign.inspirationFolder);
-  if (existsSync(localPath)) return localPath;
+  if (campaign.inspirationFolder) {
+    const localPath = path.join(BSC_ROOT, campaign.inspirationFolder);
+    if (existsSync(localPath)) return localPath;
+  }
   // Fall back to bundled data/ using campaign ID
-  const campaignId = Object.entries(loadCampaigns()).find(([, c]) => c === campaign)?.[0] || '';
   const bundledPath = path.join(DATA_DIR, 'inspirations', campaignId);
   if (existsSync(bundledPath)) return bundledPath;
   return null;
@@ -166,7 +167,7 @@ app.get('/api/campaigns/:id/inspirations', (req, res) => {
   const campaign = campaigns[req.params.id];
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-  const folder = resolveInspirationFolder(campaign);
+  const folder = resolveInspirationFolder(req.params.id, campaign);
   if (!folder) return res.json({ images: [] });
 
   const files = readdirSync(folder).filter(f => IMAGE_EXTS.has(path.extname(f).toLowerCase()) && !f.startsWith('desktop'));
@@ -181,7 +182,7 @@ app.get('/api/campaigns/:id/inspiration-image/:filename', (req, res) => {
   const campaign = campaigns[req.params.id];
   if (!campaign) return res.status(404).send('Not found');
 
-  const folder = resolveInspirationFolder(campaign);
+  const folder = resolveInspirationFolder(req.params.id, campaign);
   if (!folder) return res.status(404).send('Not found');
 
   const filePath = path.join(folder, req.params.filename);
