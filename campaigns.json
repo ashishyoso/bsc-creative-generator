@@ -15,14 +15,24 @@
     "systemPromptExtra": "FBT is a PREMIUM product. Use dark gradient backgrounds only. Runtime is 90 minutes (the '99' on the LED display is battery percentage, NOT runtime). PRODUCT ACCURACY IS NON-NEGOTIABLE: The product has a specific shape — chrome upper section transitioning to matte black lower body, oval LED display, circular metallic power button, orange accent ring at head base, T-blade on top, and the logo 'BOMBAY SHAVING COMPANY' in stacked white text on the chrome section. The travel case is a black hard-shell zippered case with 'BOMBAY SHAVING COMPANY' in white stacked text. DO NOT invent a different product or case design. Copy the reference images exactly."
   },
   "3_FOR_999": {
-    "name": "3 for 999 Combo",
-    "productSlug": "",
-    "productImages": {},
-    "defaultAspectRatio": "1:1",
+    "name": "3 for ₹999 Combo",
+    "productSlug": "3 for 999",
+    "productImages": {
+      "trimmer": "powerstyler trimmer.png",
+      "perfume1": "toxic fruit 15ml.png",
+      "perfume2": "little beach.png 15ml.png",
+      "perfume3": "Layer 1.png",
+      "facewash1": "Cool Detox Facewash.png",
+      "facewash2": "Daily Detan Facewash.png",
+      "hrs": "HRS.png",
+      "trimmer_box": "Group 1.png",
+      "soap": "Group 2.png"
+    },
+    "defaultAspectRatio": "9:16",
     "defaultResolution": "2K",
     "inspirationFolder": "",
-    "designStylePath": "",
-    "systemPromptExtra": "Value combo offer. Show multiple products together. Price must be prominent. Urgency-driven copy."
+    "designStylePath": "ads/3_for_999_campaign/design_style.md",
+    "systemPromptExtra": "3 for ₹999 VALUE campaign. RULES: 1) '₹999' must be the BIGGEST visual element in every creative — use ₹ symbol always. 2) Always include at least 1 trimmer when showing products. 3) Hero combo is 1 trimmer + 2 perfumes. 4) Can do standalone trimmer with offer text. 5) Can do meme/reaction creatives without products. 6) Use '@₹999' format. 7) This is a VALUE play — accessible, fun, not premium/luxury tone. 8) Copy the product images EXACTLY from references — do not redesign products. 9) No BSC logo in layout — product packaging logos are sufficient. 10) Urgency always: 'limited stock', 'only on website'."
   },
   "18HR_SALE": {
     "name": "18 Hour Flash Sale",
