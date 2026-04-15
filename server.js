@@ -524,21 +524,19 @@ app.post('/api/generate', async (req, res) => {
       'Text in the image is mandatory, not optional. ' +
       'Generate exactly ONE image, not multiple.\n\n';
 
-    systemPrefix += 'BRAND STYLE: Bombay Shaving Company aesthetic — premium, bold, angular. ' +
+    systemPrefix += 'BRAND STYLE: Bombay Shaving Company aesthetic — bold, angular. ' +
       'Crisp lighting with distinct angles and sharp shadows. ' +
-      'Products at slight angles on dark surfaces or platforms. ' +
-      'Light bursts or glow effects behind product silhouette. ' +
-      'Feature callouts as floating chip/badge-style labels. ' +
       'Clean, uncluttered composition. Maximum visual impact.\n\n' +
-      'REMINDER: The product in the reference image is a REAL product photo. ' +
-      'Your output MUST contain this exact product — not a redesigned version, not an approximation, not a "similar" product. ' +
-      'The logo on the product body says "BOMBAY SHAVING COMPANY" in a specific stacked format — reproduce it EXACTLY. ' +
-      'The travel case is a specific black hard-shell case with "BOMBAY SHAVING COMPANY" logo — reproduce it EXACTLY. ' +
-      'Wrong product = useless output. Accuracy over creativity.\n\n' +
+      'CRITICAL — PRODUCT ACCURACY: The product(s) in the reference images are REAL product photos. ' +
+      'Your output MUST contain these exact products — not redesigned versions, not approximations. ' +
+      'Copy EVERY detail: shape, material (plastic vs metal), color, texture, labels, logos on packaging. ' +
+      'If a product is matte black plastic — render it as matte black plastic, NOT as chrome or metallic. ' +
+      'If a product is chrome metal — render it as chrome metal. Match the reference EXACTLY. ' +
+      'Wrong product appearance = useless output. Accuracy over creativity.\n\n' +
       'LOGO RULE — NON-NEGOTIABLE: Do NOT add "BOMBAY SHAVING COMPANY" or any BSC logo as a standalone text element, ' +
       'header, footer, watermark, or design element in the creative layout. The logo should ONLY appear where it ' +
-      'physically exists on the real product body and travel case. No floating logo. No header logo. No corner logo. ' +
-      'No text overlay of the brand name. If the prompt asks for headline text, that headline is NOT the brand name.\n\n';
+      'physically exists on the real product packaging. No floating logo. No header logo. No corner logo. ' +
+      'No text overlay of the brand name.\n\n';
 
     // Campaign-specific system prompt
     if (campaign?.systemPromptExtra) {
