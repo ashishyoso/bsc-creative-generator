@@ -267,7 +267,8 @@ app.post('/api/generate-from-reference', async (req, res) => {
       '1. Uses the EXACT same layout, composition, spacing, and visual style from the reference/inspiration image\n' +
       '2. Replaces the product in the reference with the REAL product from the product photos (first images) — copied PIXEL FOR PIXEL\n' +
       '3. Adapts colors, lighting, and mood to match the campaign aesthetic\n' +
-      '4. Keeps any text style/placement approach from the reference but adapts the words for this product\n\n';
+      '4. Do NOT copy any text, headlines, brand names, or copy from the reference images — write fresh text appropriate for this BSC campaign\n' +
+      '5. The reference shows HOW the creative should look (layout, style), not WHAT it should say (text, copy)\n\n';
 
     if (campaign?.systemPromptExtra) {
       instruction += `CAMPAIGN RULES: ${campaign.systemPromptExtra}\n\n`;
@@ -496,6 +497,10 @@ app.post('/api/generate', async (req, res) => {
       for (const img of referenceImages) {
         contentParts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
       }
+      systemPrefix += 'REFERENCE IMAGES: The reference/inspiration images are for DESIGN ONLY. ' +
+        'Use them ONLY for layout, composition, spacing, lighting, and visual style. ' +
+        'Do NOT copy any text, headlines, brand names, or copy from the reference images. ' +
+        'Write fresh text appropriate for this BSC campaign. The references show HOW the creative should look, not WHAT it should say.\n\n';
     }
 
     // Build system instruction
