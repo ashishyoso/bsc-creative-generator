@@ -897,6 +897,112 @@ textarea:focus {
   box-shadow: 0 2px 8px var(--accent-glow);
 }
 
+/* Resize Section */
+.resize-section {
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.resize-controls {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-top: 12px;
+}
+.resize-controls .resize-upload-area {
+  flex: 1;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.resize-controls .resize-upload-area:hover,
+.resize-controls .resize-upload-area.drag-over {
+  border-color: var(--accent2);
+  background: var(--accent2-glow);
+  box-shadow: 0 0 30px var(--accent2-glow);
+}
+.resize-controls .resize-upload-area .file-icon { font-size: 28px; }
+.resize-controls .resize-upload-area p { color: var(--text-dim); font-size: 12px; }
+.resize-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 160px;
+}
+.resize-preview {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.resize-results {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.resize-results h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 14px;
+}
+.resize-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.resize-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.resize-pair {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.resize-original, .resize-output {
+  flex: 1;
+  text-align: center;
+}
+.resize-original img, .resize-output img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  display: block;
+  margin: 0 auto 8px;
+}
+.resize-original span, .resize-output span {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 6px;
+}
+.resize-arrow {
+  font-size: 24px;
+  color: var(--accent2);
+  flex-shrink: 0;
+}
+.resize-output .card-placeholder {
+  max-height: 300px;
+  aspect-ratio: auto;
+  min-height: 150px;
+  border-radius: 8px;
+}
+.resize-download {
+  margin-top: 6px;
+}
+
 /* Utilities */
 .hidden { display: none !important; }
 

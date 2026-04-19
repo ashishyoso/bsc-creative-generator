@@ -596,6 +596,74 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ==========================================================
+// RESIZE CREATIVE (separate workflow)
+// ==========================================================
+app.post('/api/resize', async (req, res) => {
+  try {
+    const { image, targetAspectRatio, imageSize } = req.body;
+    if (!image?.data) return res.status(400).json({ error: 'No image provided' });
+    if (!targetAspectRatio) return res.status(400).json({ error: 'Target aspect ratio is required' });
+
+    const ai = getClient(req);
+    const modelId = 'gemini-3-pro-image-preview';
+
+    const contentParts = [
+      { inlineData: { mimeType: image.mimeType, data: image.data } },
+      { text:
+        'RESIZE THIS IMAGE to the new aspect ratio. This is a STRICT resize/recompose operation.\n\n' +
+        'ABSOLUTE RULES — ZERO TOLERANCE:\n' +
+        '1. Do NOT change, modify, or alter ANY text in the image — every word, every letter, every number must be IDENTICAL\n' +
+        '2. Do NOT change, modify, or alter ANY product — same shape, same logo, same colors, same proportions, pixel-perfect\n' +
+        '3. Do NOT change, modify, or alter ANY brand logo on products — "BOMBAY SHAVING COMPANY" must remain exactly as-is\n' +
+        '4. Do NOT change the visual style, color grading, lighting, mood, or aesthetic\n' +
+        '5. Do NOT add any new elements, text, watermarks, or objects\n' +
+        '6. Do NOT remove any existing elements\n' +
+        '7. ONLY extend or crop the background/negative space to fit the new aspect ratio\n' +
+        '8. Keep ALL existing content centered and fully visible — do not crop any product, text, or important element\n\n' +
+        'If the new ratio is taller (e.g. 1:1 → 9:16): extend the background ABOVE and BELOW, keeping all content centered\n' +
+        'If the new ratio is wider (e.g. 9:16 → 1:1): extend the background LEFT and RIGHT, keeping all content centered\n\n' +
+        'The output must look like the SAME creative, just in a different canvas size. ' +
+        'If someone compared the original and resized side-by-side, the ONLY difference should be more/less background space. ' +
+        'Everything else — text, products, logos, colors, style — must be IDENTICAL.'
+      }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: [{ role: 'user', parts: contentParts }],
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: {
+          aspectRatio: targetAspectRatio,
+          imageSize: imageSize || '2K',
+        },
+      },
+    });
+
+    const parts = response.candidates?.[0]?.content?.parts || [];
+    let imageData = null;
+    let textData = '';
+
+    for (const part of parts) {
+      if (part.inlineData && !imageData) {
+        imageData = { mimeType: part.inlineData.mimeType, data: part.inlineData.data };
+      }
+      if (part.text) textData += part.text;
+    }
+
+    if (!imageData) {
+      return res.status(422).json({ error: 'Resize failed. The model could not process this image.', text: textData });
+    }
+
+    const savedFile = saveImageLocally(imageData.data, imageData.mimeType, 'resize');
+    res.json({ image: imageData, text: textData, savedFile });
+  } catch (err) {
+    console.error('Resize error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================================
 // PARSE BRIEF FILE (xlsx/csv)
 // ==========================================================
 app.post('/api/parse-brief', upload.single('file'), (req, res) => {

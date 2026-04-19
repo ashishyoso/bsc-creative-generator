@@ -156,6 +156,39 @@
       </div>
     </section>
 
+    <!-- Resize Workflow (separate) -->
+    <section class="resize-section">
+      <div class="section-header">
+        <h3>Resize Creatives</h3>
+        <p class="section-hint">Upload existing creatives and resize to a new aspect ratio. Text, products, and logos stay untouched.</p>
+      </div>
+      <div class="resize-controls">
+        <div class="resize-upload-area" id="resizeUploadArea">
+          <span class="file-icon">📐</span>
+          <p>Drag & drop creatives to resize or click to browse</p>
+          <p class="file-hint">Upload one or more images</p>
+          <input type="file" id="resizeInput" accept="image/*" multiple hidden />
+        </div>
+        <div class="resize-options">
+          <div class="setting">
+            <label for="resizeTarget">Target Size</label>
+            <select id="resizeTarget">
+              <option value="9:16">9:16 (Story)</option>
+              <option value="1:1">1:1 (Square)</option>
+              <option value="4:5">4:5 (Feed)</option>
+              <option value="16:9">16:9 (Landscape)</option>
+            </select>
+          </div>
+          <button id="btnResize" class="btn btn-primary" disabled>Resize All</button>
+        </div>
+      </div>
+      <div id="resizePreview" class="resize-preview hidden"></div>
+      <div id="resizeResults" class="resize-results hidden">
+        <h4>Resized</h4>
+        <div id="resizeGrid" class="resize-grid"></div>
+      </div>
+    </section>
+
     <!-- Progress -->
     <section id="progressSection" class="progress-section hidden">
       <div class="progress-header">

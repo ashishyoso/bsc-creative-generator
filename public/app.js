@@ -860,6 +860,131 @@ els.btnClear.addEventListener('click', () => {
 });
 
 // ============================================================
+// Resize Workflow
+// ============================================================
+const resizeUploadArea = $('#resizeUploadArea');
+const resizeInput = $('#resizeInput');
+const resizePreview = $('#resizePreview');
+const resizeTarget = $('#resizeTarget');
+const btnResize = $('#btnResize');
+const resizeResults = $('#resizeResults');
+const resizeGrid = $('#resizeGrid');
+
+const resizeState = { images: [] };
+
+resizeUploadArea.addEventListener('click', () => resizeInput.click());
+resizeUploadArea.addEventListener('dragover', e => { e.preventDefault(); resizeUploadArea.classList.add('drag-over'); });
+resizeUploadArea.addEventListener('dragleave', () => resizeUploadArea.classList.remove('drag-over'));
+resizeUploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  resizeUploadArea.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) handleResizeFiles(e.dataTransfer.files);
+});
+resizeInput.addEventListener('change', () => {
+  if (resizeInput.files.length) handleResizeFiles(resizeInput.files);
+});
+
+async function handleResizeFiles(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const data = await fileToBase64(file);
+    resizeState.images.push({ name: file.name, mimeType: file.type, data });
+  }
+  renderResizePreview();
+}
+
+function renderResizePreview() {
+  btnResize.disabled = resizeState.images.length === 0;
+  if (!resizeState.images.length) { resizePreview.classList.add('hidden'); return; }
+  resizePreview.classList.remove('hidden');
+  resizePreview.innerHTML = resizeState.images.map((img, i) => `
+    <div class="product-thumb">
+      <img src="data:${img.mimeType};base64,${img.data}" alt="${img.name}" />
+      <button class="product-thumb-remove" data-ridx="${i}">&times;</button>
+      <div class="product-thumb-name">${img.name}</div>
+    </div>
+  `).join('');
+  resizePreview.querySelectorAll('.product-thumb-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resizeState.images.splice(parseInt(btn.dataset.ridx), 1);
+      renderResizePreview();
+    });
+  });
+}
+
+btnResize.addEventListener('click', async () => {
+  if (!resizeState.images.length) return alert('Upload at least one image to resize.');
+  if (!els.apiKey.value.trim()) return alert('Enter your Gemini API key.');
+
+  btnResize.disabled = true;
+  btnResize.textContent = 'Resizing...';
+  resizeResults.classList.remove('hidden');
+  resizeGrid.innerHTML = '';
+
+  const target = resizeTarget.value;
+
+  for (let i = 0; i < resizeState.images.length; i++) {
+    const img = resizeState.images[i];
+
+    // Add placeholder
+    const card = document.createElement('div');
+    card.className = 'resize-card';
+    card.innerHTML = `
+      <div class="resize-pair">
+        <div class="resize-original"><img src="data:${img.mimeType};base64,${img.data}" alt="Original" /><span>Original</span></div>
+        <div class="resize-arrow">→</div>
+        <div class="resize-output"><div class="card-placeholder"><div class="spinner"></div></div><span>Resizing to ${target}...</span></div>
+      </div>`;
+    resizeGrid.appendChild(card);
+
+    try {
+      const res = await fetch('/api/resize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': els.apiKey.value.trim(),
+        },
+        body: JSON.stringify({
+          image: { mimeType: img.mimeType, data: img.data },
+          targetAspectRatio: target,
+          imageSize: '2K',
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const outputDiv = card.querySelector('.resize-output');
+      outputDiv.innerHTML = `
+        <img src="data:${data.image.mimeType};base64,${data.image.data}" alt="Resized" />
+        <span>${target}</span>
+        <button class="btn btn-sm btn-primary resize-download" onclick="downloadBase64('${img.name.replace(/\.[^.]+$/, '')}_${target.replace(':', 'x')}', '${data.image.data}', '${data.image.mimeType}')">Download</button>`;
+    } catch (err) {
+      const outputDiv = card.querySelector('.resize-output');
+      outputDiv.innerHTML = `<div style="color:var(--danger);padding:20px;font-size:12px;">${escapeHtml(err.message)}</div><span>Failed</span>`;
+    }
+  }
+
+  btnResize.disabled = false;
+  btnResize.textContent = 'Resize All';
+});
+
+function downloadBase64(name, base64Data, mimeType) {
+  const ext = mimeType?.includes('png') ? 'png' : 'jpg';
+  const byteString = atob(base64Data);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+  const blob = new Blob([ab], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${name}.${ext}`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ============================================================
 // Init
 // ============================================================
 const savedKey = sessionStorage.getItem('gemini_api_key');
