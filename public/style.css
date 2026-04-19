@@ -946,11 +946,16 @@ textarea:focus {
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
+.resize-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
 .resize-results h4 {
   font-size: 14px;
   font-weight: 600;
   color: var(--accent2);
-  margin-bottom: 14px;
 }
 .resize-grid {
   display: flex;

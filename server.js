@@ -610,21 +610,24 @@ app.post('/api/resize', async (req, res) => {
     const contentParts = [
       { inlineData: { mimeType: image.mimeType, data: image.data } },
       { text:
-        'RESIZE THIS IMAGE to the new aspect ratio. This is a STRICT resize/recompose operation.\n\n' +
-        'ABSOLUTE RULES — ZERO TOLERANCE:\n' +
-        '1. Do NOT change, modify, or alter ANY text in the image — every word, every letter, every number must be IDENTICAL\n' +
-        '2. Do NOT change, modify, or alter ANY product — same shape, same logo, same colors, same proportions, pixel-perfect\n' +
-        '3. Do NOT change, modify, or alter ANY brand logo on products — "BOMBAY SHAVING COMPANY" must remain exactly as-is\n' +
-        '4. Do NOT change the visual style, color grading, lighting, mood, or aesthetic\n' +
-        '5. Do NOT add any new elements, text, watermarks, or objects\n' +
-        '6. Do NOT remove any existing elements\n' +
-        '7. ONLY extend or crop the background/negative space to fit the new aspect ratio\n' +
-        '8. Keep ALL existing content centered and fully visible — do not crop any product, text, or important element\n\n' +
-        'If the new ratio is taller (e.g. 1:1 → 9:16): extend the background ABOVE and BELOW, keeping all content centered\n' +
-        'If the new ratio is wider (e.g. 9:16 → 1:1): extend the background LEFT and RIGHT, keeping all content centered\n\n' +
-        'The output must look like the SAME creative, just in a different canvas size. ' +
-        'If someone compared the original and resized side-by-side, the ONLY difference should be more/less background space. ' +
-        'Everything else — text, products, logos, colors, style — must be IDENTICAL.'
+        'RECOMPOSE this advertisement creative for a new aspect ratio: ' + targetAspectRatio + '.\n\n' +
+        'This is a LAYOUT RECOMPOSITION — you must REDESIGN THE LAYOUT to fit the new canvas naturally.\n\n' +
+        'WHAT YOU MUST DO:\n' +
+        '- Rearrange and reposition the elements (text, products, backgrounds) to create a BALANCED, AESTHETICALLY PLEASING composition for the new aspect ratio\n' +
+        '- The new layout must look like it was ORIGINALLY DESIGNED for this ratio — not like a vertical image crammed into a square\n' +
+        '- Redistribute spacing, margins, and padding so the composition breathes naturally in the new format\n' +
+        '- If going from tall (9:16) to square (1:1): spread elements horizontally, use the width. Products can sit side-by-side with text. Do NOT just add side padding.\n' +
+        '- If going from square (1:1) to tall (9:16): stack elements vertically with generous spacing. Text top, products middle, CTA bottom.\n' +
+        '- The result must be a properly DESIGNED layout, not a letterboxed/pillarboxed version of the original\n\n' +
+        'WHAT YOU MUST PRESERVE (ZERO TOLERANCE):\n' +
+        '1. ALL text — every word, letter, number, headline must appear EXACTLY as in the original. Same fonts, same styling.\n' +
+        '2. ALL products — same products, same shapes, same logos on products, same colors. Copy them pixel-perfect.\n' +
+        '3. Visual style — same color palette, same lighting mood, same background style/color, same aesthetic\n' +
+        '4. Do NOT add new elements, text, watermarks, or objects that weren\'t in the original\n' +
+        '5. Do NOT remove any element from the original\n' +
+        '6. Do NOT change any brand logo on any product\n\n' +
+        'QUALITY CHECK: The output should look like a professional designer adapted this creative for ' + targetAspectRatio + '. ' +
+        'It should be balanced, centered, and aesthetically aligned — NOT stretched, NOT letterboxed, NOT cramped.'
       }
     ];
 

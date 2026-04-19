@@ -870,7 +870,8 @@ const btnResize = $('#btnResize');
 const resizeResults = $('#resizeResults');
 const resizeGrid = $('#resizeGrid');
 
-const resizeState = { images: [] };
+const resizeState = { images: [], results: [] };
+const btnDownloadAllResized = $('#btnDownloadAllResized');
 
 resizeUploadArea.addEventListener('click', () => resizeInput.click());
 resizeUploadArea.addEventListener('dragover', e => { e.preventDefault(); resizeUploadArea.classList.add('drag-over'); });
@@ -921,6 +922,7 @@ btnResize.addEventListener('click', async () => {
   btnResize.textContent = 'Resizing...';
   resizeResults.classList.remove('hidden');
   resizeGrid.innerHTML = '';
+  resizeState.results = [];
 
   const target = resizeTarget.value;
 
@@ -954,11 +956,17 @@ btnResize.addEventListener('click', async () => {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
+      resizeState.results.push({ name: img.name.replace(/\.[^.]+$/, '') + '_' + target.replace(':', 'x'), data: data.image.data, mimeType: data.image.mimeType });
       const outputDiv = card.querySelector('.resize-output');
+      const rIdx = resizeState.results.length - 1;
       outputDiv.innerHTML = `
         <img src="data:${data.image.mimeType};base64,${data.image.data}" alt="Resized" />
         <span>${target}</span>
-        <button class="btn btn-sm btn-primary resize-download" onclick="downloadBase64('${img.name.replace(/\.[^.]+$/, '')}_${target.replace(':', 'x')}', '${data.image.data}', '${data.image.mimeType}')">Download</button>`;
+        <button class="btn btn-sm btn-primary resize-download" data-resize-idx="${rIdx}">Download</button>`;
+      outputDiv.querySelector('.resize-download').addEventListener('click', () => {
+        const r = resizeState.results[rIdx];
+        downloadBase64(r.name, r.data, r.mimeType);
+      });
     } catch (err) {
       const outputDiv = card.querySelector('.resize-output');
       outputDiv.innerHTML = `<div style="color:var(--danger);padding:20px;font-size:12px;">${escapeHtml(err.message)}</div><span>Failed</span>`;
@@ -967,6 +975,12 @@ btnResize.addEventListener('click', async () => {
 
   btnResize.disabled = false;
   btnResize.textContent = 'Resize All';
+});
+
+btnDownloadAllResized.addEventListener('click', async () => {
+  if (!resizeState.results.length) return alert('No resized images to download.');
+  const images = resizeState.results.map(r => ({ filename: r.name, data: r.data, mimeType: r.mimeType }));
+  await downloadZip(images);
 });
 
 function downloadBase64(name, base64Data, mimeType) {
