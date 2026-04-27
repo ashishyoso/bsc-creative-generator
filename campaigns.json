@@ -34,6 +34,28 @@
     "designStylePath": "ads/3_for_999_campaign/design_style.md",
     "systemPromptExtra": "3 for ₹999 VALUE campaign. RULES: 1) '₹999' must be the BIGGEST visual element in every creative — use ₹ symbol always. 2) Always include at least 1 trimmer when showing products. 3) Hero combo is 1 trimmer + 2 perfumes. 4) Can do standalone trimmer with offer text. 5) Can do meme/reaction creatives without products. 6) Use '@₹999' format. 7) This is a VALUE play — accessible, fun, not premium/luxury tone. 8) Copy the product images EXACTLY from references — do not redesign products. 9) No BSC logo in layout — product packaging logos are sufficient. 10) Urgency always: 'limited stock', 'only on website'. CRITICAL PRODUCT NOTE: The Power Styler trimmer in this campaign is a MATTE BLACK PLASTIC body with a textured dotted grip pattern and a numbered dial wheel — it is NOT chrome, NOT metallic, NOT shiny. Do NOT apply chrome or metallic finishes to this trimmer. It is a completely different product from the FBT. Copy the trimmer EXACTLY from the reference image — black plastic body, silver blade at top, round numbered dial in the middle, textured grip dots, BSC logo at bottom. PRODUCT COUNT RULE: When showing products, ALWAYS show exactly 3 products (it is 3 for ₹999 — the number 3 is the offer). Never show 2 products. Never show 4+. Always 3, and 1 of them MUST be a trimmer."
   },
+  "5_FOR_1499": {
+    "name": "Buy 5 Products @ ₹1499",
+    "productSlug": "5 for 1499",
+    "productImages": {
+      "must1": "must 1.png",
+      "must2": "must 2 .webp",
+      "must3": "must 3.png",
+      "must4": "must 4.png",
+      "optional_cool_detox": "Cool Detox Facewash.png",
+      "optional_daily_detan": "Daily Detan Facewash.png",
+      "optional_group2": "Group 2.png",
+      "optional_hrs": "HRS.png",
+      "optional_layer1": "Layer 1.png",
+      "optional_little_beach": "little beach.png 15ml.png",
+      "optional_toxic_fruit": "toxic fruit 15ml.png"
+    },
+    "defaultAspectRatio": "9:16",
+    "defaultResolution": "2K",
+    "inspirationFolder": "",
+    "designStylePath": "ads/5_for_1499_campaign/design_style.md",
+    "systemPromptExtra": "5 for ₹1499 VALUE BUNDLE campaign. HEADLINE: The text 'Buy 5 Products @ ₹1499' (or short form 'Buy 5 @ ₹1499') must be the BIGGEST visual element in every creative — always use the ₹ symbol. PRODUCT SELECTION RULES — NON-NEGOTIABLE: 1) The 4 reference images whose filenames begin with 'must' (must 1, must 2, must 3, must 4) MUST appear in EVERY creative — all four are mandatory hero products. 2) From the remaining 7 reference images (Cool Detox Facewash, Daily Detan Facewash, Group 2, HRS, Layer 1, little beach 15ml, toxic fruit 15ml), pick 1, 2, or 3 — never zero, never more than 3. So every creative shows 5, 6, or 7 products total (4 musts + 1-3 optionals). 3) Copy each chosen product EXACTLY from its reference image — same shape, label, colour, finish, proportions. Do NOT redesign, recolour, or invent variants. 4) Products that are matte plastic stay matte plastic; chrome stays chrome; bottles stay the same shape and label. 5) Do NOT add a standalone 'BOMBAY SHAVING COMPANY' logo anywhere — brand presence comes from the product packaging itself. 6) VALUE-PLAY tone: accessible, fun, bold — not luxury or premium. 7) Always inject urgency: 'limited stock', 'website only', 'today only'. 8) Use '@₹1499' formatting whenever the price appears in copy."
+  },
   "18HR_SALE": {
     "name": "18 Hour Flash Sale",
     "productSlug": "",
