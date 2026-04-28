@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 import multer from 'multer';
 import XLSX from 'xlsx';
 import archiver from 'archiver';
-import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -225,6 +225,88 @@ app.get('/api/campaigns/:id/design-style', (req, res) => {
   if (!existsSync(filePath)) return res.json({ content: '' });
 
   res.json({ content: readFileSync(filePath, 'utf-8') });
+});
+
+// ==========================================================
+// HISTORY — list + serve previously generated images
+// ==========================================================
+const HISTORY_FILENAME_RE = /^(.+?)_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})_([a-z0-9]+)\.(png|jpg|jpeg|webp)$/i;
+
+function parseHistoryFilename(name, fallbackMtime) {
+  const m = name.match(HISTORY_FILENAME_RE);
+  if (m) {
+    const [, prefix, y, mo, d, h, mi, s] = m;
+    const date = `${y}-${mo}-${d}`;
+    const time = `${h}:${mi}:${s}`;
+    return { prefix, date, time, ts: new Date(`${date}T${time}Z`).getTime() };
+  }
+  // Legacy filenames (no timestamp) — fall back to mtime
+  const dt = new Date(fallbackMtime);
+  const date = dt.toISOString().slice(0, 10);
+  const time = dt.toISOString().slice(11, 19);
+  // best-effort prefix: chunk before first underscore that contains letters
+  const prefix = name.split('.')[0].split('_').slice(0, 2).join('_');
+  return { prefix, date, time, ts: dt.getTime() };
+}
+
+app.get('/api/history', (req, res) => {
+  try {
+    if (!existsSync(OUTPUT_DIR)) return res.json({ groups: [], total: 0, dir: OUTPUT_DIR });
+
+    const files = readdirSync(OUTPUT_DIR).filter(f => IMAGE_EXTS.has(path.extname(f).toLowerCase()));
+    const items = files.map(name => {
+      const stat = statSync(path.join(OUTPUT_DIR, name));
+      const meta = parseHistoryFilename(name, stat.mtimeMs);
+      return {
+        filename: name,
+        size: stat.size,
+        campaign: meta.prefix,
+        date: meta.date,
+        time: meta.time,
+        ts: meta.ts,
+      };
+    });
+
+    items.sort((a, b) => b.ts - a.ts);
+
+    const byDate = new Map();
+    for (const it of items) {
+      if (!byDate.has(it.date)) byDate.set(it.date, []);
+      byDate.get(it.date).push(it);
+    }
+    const groups = [...byDate.entries()].map(([date, list]) => ({
+      date,
+      count: list.length,
+      items: list,
+    }));
+
+    res.json({ groups, total: items.length, dir: OUTPUT_DIR });
+  } catch (err) {
+    console.error('History list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/history/image/:filename', (req, res) => {
+  const safe = path.basename(req.params.filename);
+  const filePath = path.join(OUTPUT_DIR, safe);
+  if (!existsSync(filePath)) return res.status(404).send('Not found');
+  const ext = path.extname(filePath).toLowerCase();
+  res.setHeader('Content-Type', getMimeType(ext));
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(readFileSync(filePath));
+});
+
+app.delete('/api/history/image/:filename', (req, res) => {
+  try {
+    const safe = path.basename(req.params.filename);
+    const filePath = path.join(OUTPUT_DIR, safe);
+    if (!existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+    unlinkSync(filePath);
+    res.json({ deleted: safe });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ==========================================================

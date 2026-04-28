@@ -1363,5 +1363,116 @@ manage.id.addEventListener('input', () => {
   }
 });
 
+// ============================================================
+// History
+// ============================================================
+const history = {
+  modal: $('#historyModal'),
+  groupsEl: $('#historyGroups'),
+  emptyEl: $('#historyEmpty'),
+  ephemeralNote: $('#historyEphemeralNote'),
+  filterEl: $('#historyFilter'),
+  countEl: $('#historyCount'),
+  refreshBtn: $('#btnHistoryRefresh'),
+  openBtn: $('#btnHistory'),
+  data: { groups: [], total: 0 },
+};
+
+history.openBtn.addEventListener('click', () => openHistory());
+history.refreshBtn.addEventListener('click', loadHistory);
+history.filterEl.addEventListener('input', renderHistory);
+$$('#historyModal [data-close="history"]').forEach(el => el.addEventListener('click', () => history.modal.classList.add('hidden')));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !history.modal.classList.contains('hidden')) {
+    history.modal.classList.add('hidden');
+  }
+});
+
+async function openHistory() {
+  history.modal.classList.remove('hidden');
+  await loadHistory();
+}
+
+async function loadHistory() {
+  history.groupsEl.innerHTML = '<p class="text-dim" style="text-align:center;padding:20px">Loading…</p>';
+  history.emptyEl.classList.add('hidden');
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    history.data = data;
+    // Show ephemeral warning if we're on Railway
+    history.ephemeralNote.classList.toggle('hidden', !location.host.includes('railway.app'));
+    renderHistory();
+  } catch (err) {
+    history.groupsEl.innerHTML = `<p class="text-dim" style="text-align:center;padding:20px;color:#ff8a8a">Error: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function renderHistory() {
+  const filter = (history.filterEl.value || '').trim().toLowerCase();
+  const groups = (history.data.groups || []).map(g => ({
+    ...g,
+    items: filter ? g.items.filter(it => (it.campaign || '').toLowerCase().includes(filter)) : g.items,
+  })).filter(g => g.items.length);
+
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  history.countEl.textContent = total ? `${total} image${total === 1 ? '' : 's'}` : '';
+
+  if (!total) {
+    history.groupsEl.innerHTML = '';
+    history.emptyEl.textContent = filter
+      ? `No matches for "${filter}".`
+      : 'No images yet — generated creatives will appear here.';
+    history.emptyEl.classList.remove('hidden');
+    return;
+  }
+  history.emptyEl.classList.add('hidden');
+
+  history.groupsEl.innerHTML = groups.map(g => `
+    <div class="history-group">
+      <div class="history-group-header">
+        <h3>${formatHistoryDate(g.date)}</h3>
+        <span class="text-dim">${g.items.length} image${g.items.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="history-grid">
+        ${g.items.map(it => `
+          <div class="history-thumb" data-filename="${escapeHtml(it.filename)}">
+            <img loading="lazy" src="/api/history/image/${encodeURIComponent(it.filename)}" alt="${escapeHtml(it.filename)}" />
+            <div class="history-thumb-meta">
+              <span class="history-thumb-campaign">${escapeHtml(it.campaign || '—')}</span>
+              <span class="history-thumb-time">${escapeHtml(it.time || '')}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  history.groupsEl.querySelectorAll('.history-thumb').forEach(el => {
+    el.addEventListener('click', () => openHistoryImage(el.dataset.filename));
+  });
+}
+
+function formatHistoryDate(iso) {
+  const today = new Date().toISOString().slice(0, 10);
+  const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (iso === today) return `Today · ${iso}`;
+  if (iso === yest) return `Yesterday · ${iso}`;
+  return iso;
+}
+
+function openHistoryImage(filename) {
+  const url = `/api/history/image/${encodeURIComponent(filename)}`;
+  els.modalImage.src = url;
+  els.modalPrompt.textContent = filename;
+  els.modalDownload.onclick = () => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+  };
+  els.imageModal.classList.remove('hidden');
+}
+
 // Load campaigns on start
 loadCampaigns();

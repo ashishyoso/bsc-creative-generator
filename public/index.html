@@ -14,6 +14,7 @@
     <header class="header">
       <h1>YOSO <span class="header-accent">Creative Generator</span></h1>
       <p class="subtitle">Select a campaign, add references or prompts, generate creatives</p>
+      <button id="btnHistory" type="button" class="btn-history" title="View history">📜 History</button>
     </header>
 
     <!-- Step 1: Campaign + Settings -->
@@ -225,6 +226,25 @@
       </div>
       <div class="gallery-grid" id="galleryGrid"></div>
     </section>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal hidden" id="historyModal">
+    <div class="modal-backdrop" data-close="history"></div>
+    <div class="modal-content history-modal-content">
+      <button class="modal-close" data-close="history">&times;</button>
+      <div class="history-modal-header">
+        <h2>Generation History</h2>
+        <div class="history-controls">
+          <input type="text" id="historyFilter" placeholder="Filter by campaign…" />
+          <span id="historyCount" class="text-dim"></span>
+          <button id="btnHistoryRefresh" class="btn btn-sm">Refresh</button>
+        </div>
+      </div>
+      <p id="historyEmpty" class="history-empty hidden">No images yet — generated creatives will appear here.</p>
+      <p id="historyEphemeralNote" class="history-note hidden">Heads-up: Railway storage is ephemeral — older history may be cleared on redeploy.</p>
+      <div id="historyGroups" class="history-groups"></div>
+    </div>
   </div>
 
   <!-- Manage Campaign Modal (Create / Edit) -->
