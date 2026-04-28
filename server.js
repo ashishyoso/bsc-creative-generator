@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 import multer from 'multer';
 import XLSX from 'xlsx';
 import archiver from 'archiver';
-import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -176,6 +176,24 @@ app.get('/api/campaigns/:id/inspirations', (req, res) => {
   res.json({ images });
 });
 
+// Serve a product image by campaign + filename (used by manage modal thumbnails)
+app.get('/api/campaigns/:id/product-image/:filename', (req, res) => {
+  const campaigns = loadCampaigns();
+  const campaign = campaigns[req.params.id];
+  if (!campaign) return res.status(404).send('Not found');
+
+  const folder = resolveProductFolder(campaign);
+  if (!folder) return res.status(404).send('Not found');
+
+  const fileName = path.basename(req.params.filename);
+  const filePath = path.join(folder, fileName);
+  if (!existsSync(filePath)) return res.status(404).send('Not found');
+
+  const ext = path.extname(filePath).toLowerCase();
+  res.setHeader('Content-Type', getMimeType(ext));
+  res.send(readFileSync(filePath));
+});
+
 // Serve an inspiration image by campaign + filename
 app.get('/api/campaigns/:id/inspiration-image/:filename', (req, res) => {
   const campaigns = loadCampaigns();
@@ -207,6 +225,231 @@ app.get('/api/campaigns/:id/design-style', (req, res) => {
   if (!existsSync(filePath)) return res.json({ content: '' });
 
   res.json({ content: readFileSync(filePath, 'utf-8') });
+});
+
+// ==========================================================
+// CAMPAIGN MANAGEMENT (create / update / delete + image mgmt)
+// ==========================================================
+function saveCampaigns(campaigns) {
+  const configPath = path.join(__dirname, 'campaigns.json');
+  writeFileSync(configPath, JSON.stringify(campaigns, null, 2) + '\n');
+}
+
+function sanitizeId(raw) {
+  return String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function sanitizeSlug(raw) {
+  // Allow letters, digits, spaces, dashes, underscores. Strip everything else.
+  return String(raw || '').trim().replace(/[^a-zA-Z0-9 _\-]+/g, '').replace(/\s+/g, ' ');
+}
+
+function sanitizeFilename(raw) {
+  // Keep path traversal out and drop disallowed chars
+  const base = path.basename(String(raw || ''));
+  return base.replace(/[^a-zA-Z0-9 _.\-]+/g, '').slice(0, 200);
+}
+
+function bundledProductFolder(slug) {
+  return path.join(DATA_DIR, 'product_images', slug);
+}
+
+function applyCampaignPayload(payload, existing = {}) {
+  const out = { ...existing };
+  if (payload.name !== undefined) out.name = String(payload.name).trim();
+  if (payload.productSlug !== undefined) out.productSlug = sanitizeSlug(payload.productSlug);
+  if (payload.defaultAspectRatio !== undefined) out.defaultAspectRatio = String(payload.defaultAspectRatio).trim() || '9:16';
+  if (payload.defaultResolution !== undefined) out.defaultResolution = String(payload.defaultResolution).trim() || '2K';
+  if (payload.inspirationFolder !== undefined) out.inspirationFolder = String(payload.inspirationFolder || '').trim();
+  if (payload.designStylePath !== undefined) out.designStylePath = String(payload.designStylePath || '').trim();
+  if (payload.systemPromptExtra !== undefined) out.systemPromptExtra = String(payload.systemPromptExtra || '');
+  if (payload.productImages !== undefined && payload.productImages && typeof payload.productImages === 'object') {
+    // Filter to plain {role: filename} string map
+    const cleaned = {};
+    for (const [role, file] of Object.entries(payload.productImages)) {
+      if (!role || !file) continue;
+      const cleanRole = String(role).trim().replace(/[^a-zA-Z0-9_]+/g, '_').slice(0, 60);
+      const cleanFile = sanitizeFilename(file);
+      if (cleanRole && cleanFile) cleaned[cleanRole] = cleanFile;
+    }
+    out.productImages = cleaned;
+  }
+  return out;
+}
+
+// Get full campaign config (including system prompt + image roles) for editing
+app.get('/api/campaigns/:id/config', (req, res) => {
+  const campaigns = loadCampaigns();
+  const campaign = campaigns[req.params.id];
+  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+  // Also list actual files present in the bundled folder so the UI can reconcile
+  const slug = campaign.productSlug;
+  let files = [];
+  if (slug) {
+    const folder = resolveProductFolder(campaign);
+    if (folder && existsSync(folder)) {
+      files = readdirSync(folder).filter(f => IMAGE_EXTS.has(path.extname(f).toLowerCase()) && !f.startsWith('.'));
+    }
+  }
+  res.json({ id: req.params.id, campaign, files });
+});
+
+// Create a new campaign
+app.post('/api/campaigns', (req, res) => {
+  try {
+    const payload = req.body || {};
+    const id = sanitizeId(payload.id);
+    if (!id) return res.status(400).json({ error: 'Campaign ID is required' });
+
+    const campaigns = loadCampaigns();
+    if (campaigns[id]) return res.status(409).json({ error: `Campaign "${id}" already exists` });
+
+    const campaign = applyCampaignPayload({
+      defaultAspectRatio: '9:16',
+      defaultResolution: '2K',
+      inspirationFolder: '',
+      designStylePath: '',
+      systemPromptExtra: '',
+      productImages: {},
+      ...payload,
+    });
+
+    if (!campaign.name) return res.status(400).json({ error: 'Campaign name is required' });
+    if (!campaign.productSlug) campaign.productSlug = id.toLowerCase().replace(/_/g, ' ');
+
+    // Create the bundled product folder so uploads have somewhere to land
+    const folder = bundledProductFolder(campaign.productSlug);
+    mkdirSync(folder, { recursive: true });
+
+    campaigns[id] = campaign;
+    saveCampaigns(campaigns);
+    res.json({ id, campaign, folder });
+  } catch (err) {
+    console.error('Create campaign error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update an existing campaign
+app.put('/api/campaigns/:id', (req, res) => {
+  try {
+    const campaigns = loadCampaigns();
+    const existing = campaigns[req.params.id];
+    if (!existing) return res.status(404).json({ error: 'Campaign not found' });
+
+    const updated = applyCampaignPayload(req.body || {}, existing);
+    if (!updated.name) return res.status(400).json({ error: 'Campaign name is required' });
+
+    // If slug changed, ensure new bundled folder exists (don't auto-move files — surface a warning)
+    let slugChangedFrom = null;
+    if (updated.productSlug && updated.productSlug !== existing.productSlug) {
+      slugChangedFrom = existing.productSlug;
+      mkdirSync(bundledProductFolder(updated.productSlug), { recursive: true });
+    }
+
+    campaigns[req.params.id] = updated;
+    saveCampaigns(campaigns);
+    res.json({ id: req.params.id, campaign: updated, slugChangedFrom });
+  } catch (err) {
+    console.error('Update campaign error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a campaign (config only — images stay on disk)
+app.delete('/api/campaigns/:id', (req, res) => {
+  try {
+    const campaigns = loadCampaigns();
+    if (!campaigns[req.params.id]) return res.status(404).json({ error: 'Campaign not found' });
+    delete campaigns[req.params.id];
+    saveCampaigns(campaigns);
+    res.json({ id: req.params.id, deleted: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload images to a campaign's product folder
+app.post('/api/campaigns/:id/images', upload.array('images', 30), (req, res) => {
+  try {
+    const campaigns = loadCampaigns();
+    const campaign = campaigns[req.params.id];
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+    if (!campaign.productSlug) return res.status(400).json({ error: 'Campaign has no productSlug' });
+
+    const folder = bundledProductFolder(campaign.productSlug);
+    mkdirSync(folder, { recursive: true });
+
+    const files = req.files || [];
+    if (!files.length) return res.status(400).json({ error: 'No files uploaded' });
+
+    // Optional roles array (parallel to files) — submitted as JSON string in form field
+    let roles = [];
+    if (req.body.roles) {
+      try { roles = JSON.parse(req.body.roles); } catch { roles = []; }
+    }
+
+    const written = [];
+    const productImages = { ...(campaign.productImages || {}) };
+
+    files.forEach((f, i) => {
+      const safeName = sanitizeFilename(f.originalname);
+      if (!safeName) return;
+      const ext = path.extname(safeName).toLowerCase();
+      if (!IMAGE_EXTS.has(ext)) return;
+      const filePath = path.join(folder, safeName);
+      writeFileSync(filePath, f.buffer);
+      written.push(safeName);
+
+      const role = roles[i];
+      if (role && typeof role === 'string') {
+        const cleanRole = role.trim().replace(/[^a-zA-Z0-9_]+/g, '_').slice(0, 60);
+        if (cleanRole) productImages[cleanRole] = safeName;
+      }
+    });
+
+    campaign.productImages = productImages;
+    campaigns[req.params.id] = campaign;
+    saveCampaigns(campaigns);
+
+    res.json({ written, productImages });
+  } catch (err) {
+    console.error('Upload images error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete an image from a campaign's product folder
+app.delete('/api/campaigns/:id/images/:filename', (req, res) => {
+  try {
+    const campaigns = loadCampaigns();
+    const campaign = campaigns[req.params.id];
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+    if (!campaign.productSlug) return res.status(400).json({ error: 'Campaign has no productSlug' });
+
+    const fileName = sanitizeFilename(req.params.filename);
+    const folder = bundledProductFolder(campaign.productSlug);
+    const filePath = path.join(folder, fileName);
+
+    if (existsSync(filePath)) unlinkSync(filePath);
+
+    // Drop any role mappings pointing at this filename
+    if (campaign.productImages) {
+      const cleaned = {};
+      for (const [role, f] of Object.entries(campaign.productImages)) {
+        if (f !== fileName) cleaned[role] = f;
+      }
+      campaign.productImages = cleaned;
+      campaigns[req.params.id] = campaign;
+      saveCampaigns(campaigns);
+    }
+
+    res.json({ deleted: fileName });
+  } catch (err) {
+    console.error('Delete image error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ==========================================================

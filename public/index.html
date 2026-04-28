@@ -20,9 +20,13 @@
     <section class="settings-bar">
       <div class="setting" style="flex:1.5">
         <label for="campaignSelect">Campaign</label>
-        <select id="campaignSelect">
-          <option value="">— Select Campaign —</option>
-        </select>
+        <div class="campaign-row">
+          <select id="campaignSelect">
+            <option value="">— Select Campaign —</option>
+          </select>
+          <button id="btnNewCampaign" type="button" class="btn-icon" title="Create new campaign">+ New</button>
+          <button id="btnEditCampaign" type="button" class="btn-icon" title="Edit selected campaign" disabled>Edit</button>
+        </div>
       </div>
       <div class="setting">
         <label for="apiKey">API Key</label>
@@ -221,6 +225,77 @@
       </div>
       <div class="gallery-grid" id="galleryGrid"></div>
     </section>
+  </div>
+
+  <!-- Manage Campaign Modal (Create / Edit) -->
+  <div class="modal hidden" id="manageModal">
+    <div class="modal-backdrop" data-close="manage"></div>
+    <div class="modal-content manage-modal-content">
+      <button class="modal-close" data-close="manage">&times;</button>
+      <h2 id="manageModalTitle">New Campaign</h2>
+
+      <div class="manage-grid">
+        <div class="setting">
+          <label for="mcId">Campaign ID <span class="text-dim">(uppercase, no spaces)</span></label>
+          <input type="text" id="mcId" placeholder="e.g. 5_FOR_1499" />
+        </div>
+        <div class="setting">
+          <label for="mcName">Display Name</label>
+          <input type="text" id="mcName" placeholder="e.g. Buy 5 Products @ ₹1499" />
+        </div>
+        <div class="setting">
+          <label for="mcSlug">Folder / Slug <span class="text-dim">(images go in data/product_images/&lt;slug&gt;/)</span></label>
+          <input type="text" id="mcSlug" placeholder="e.g. 5 for 1499" />
+        </div>
+        <div class="setting">
+          <label for="mcAspect">Default Aspect Ratio</label>
+          <select id="mcAspect">
+            <option value="9:16">9:16 (Story)</option>
+            <option value="4:5">4:5 (Feed)</option>
+            <option value="1:1">1:1 (Square)</option>
+            <option value="16:9">16:9 (Landscape)</option>
+            <option value="2:3">2:3 (Pinterest)</option>
+          </select>
+        </div>
+        <div class="setting">
+          <label for="mcRes">Default Resolution</label>
+          <select id="mcRes">
+            <option value="2K">2K</option>
+            <option value="1K">1K</option>
+            <option value="4K">4K</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setting" style="margin-top:14px">
+        <label for="mcPrompt">Campaign Rules <span class="text-dim">(prepended to every prompt as <code>systemPromptExtra</code>)</span></label>
+        <textarea id="mcPrompt" rows="6" placeholder="e.g. 4 'must' images appear in every creative; pick 1-3 from the rest. Headline uses ₹ symbol. Copy products exactly from references…"></textarea>
+      </div>
+
+      <div class="manage-images">
+        <div class="manage-images-header">
+          <h3>Product Images</h3>
+          <span id="mcImageCount" class="text-dim"></span>
+        </div>
+        <p class="section-hint">Tag each image with a role. Roles starting with <code>must</code> are mandatory in every creative; others are optional.</p>
+        <div id="mcImageGrid" class="manage-image-grid"></div>
+
+        <div class="manage-upload-area" id="mcUploadArea">
+          <span class="file-icon">📤</span>
+          <p>Drag & drop images here or click to browse</p>
+          <p class="file-hint">PNG, JPG, WebP — uploaded to the campaign folder</p>
+          <input type="file" id="mcUploadInput" accept="image/*" multiple hidden />
+        </div>
+        <div id="mcUploadStatus" class="file-status hidden"></div>
+      </div>
+
+      <div class="manage-actions">
+        <span id="mcStatus" class="expand-status"></span>
+        <button id="mcDelete" class="btn btn-danger hidden">Delete Campaign</button>
+        <button id="mcCancel" class="btn btn-secondary" data-close="manage">Cancel</button>
+        <button id="mcSave" class="btn btn-primary">Save Campaign</button>
+      </div>
+    </div>
   </div>
 
   <!-- Image Preview Modal -->

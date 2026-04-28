@@ -1005,5 +1005,363 @@ const savedKey = sessionStorage.getItem('gemini_api_key');
 if (savedKey) els.apiKey.value = savedKey;
 els.apiKey.addEventListener('change', () => sessionStorage.setItem('gemini_api_key', els.apiKey.value));
 
+// ============================================================
+// Campaign Management (Create / Edit)
+// ============================================================
+const manage = {
+  modal: $('#manageModal'),
+  title: $('#manageModalTitle'),
+  id: $('#mcId'),
+  name: $('#mcName'),
+  slug: $('#mcSlug'),
+  aspect: $('#mcAspect'),
+  res: $('#mcRes'),
+  prompt: $('#mcPrompt'),
+  imageGrid: $('#mcImageGrid'),
+  imageCount: $('#mcImageCount'),
+  uploadArea: $('#mcUploadArea'),
+  uploadInput: $('#mcUploadInput'),
+  uploadStatus: $('#mcUploadStatus'),
+  status: $('#mcStatus'),
+  save: $('#mcSave'),
+  cancel: $('#mcCancel'),
+  delete: $('#mcDelete'),
+  newBtn: $('#btnNewCampaign'),
+  editBtn: $('#btnEditCampaign'),
+  mode: 'create',         // 'create' | 'edit'
+  editingId: null,
+  files: [],              // [{name, role}]
+};
+
+manage.newBtn.addEventListener('click', () => openManageModal('create'));
+manage.editBtn.addEventListener('click', () => {
+  if (state.campaignId) openManageModal('edit', state.campaignId);
+});
+
+// Enable edit button when a campaign is selected
+els.campaignSelect.addEventListener('change', () => {
+  manage.editBtn.disabled = !els.campaignSelect.value;
+});
+
+// Close handlers
+$$('#manageModal [data-close="manage"]').forEach(el => el.addEventListener('click', closeManageModal));
+
+function closeManageModal() {
+  manage.modal.classList.add('hidden');
+}
+
+async function openManageModal(mode, id = null) {
+  manage.mode = mode;
+  manage.editingId = id;
+  manage.status.textContent = '';
+  manage.uploadStatus.classList.add('hidden');
+
+  if (mode === 'create') {
+    manage.title.textContent = 'New Campaign';
+    manage.id.disabled = false;
+    manage.id.value = '';
+    manage.name.value = '';
+    manage.slug.value = '';
+    manage.aspect.value = '9:16';
+    manage.res.value = '2K';
+    manage.prompt.value = '';
+    manage.files = [];
+    manage.delete.classList.add('hidden');
+    renderManageImages();
+  } else {
+    manage.title.textContent = 'Edit Campaign';
+    manage.id.disabled = true;
+    manage.delete.classList.remove('hidden');
+    try {
+      const res = await fetch(`/api/campaigns/${id}/config`);
+      if (!res.ok) throw new Error('Could not load campaign');
+      const data = await res.json();
+      const c = data.campaign || {};
+      manage.id.value = id;
+      manage.name.value = c.name || '';
+      manage.slug.value = c.productSlug || '';
+      manage.aspect.value = c.defaultAspectRatio || '9:16';
+      manage.res.value = c.defaultResolution || '2K';
+      manage.prompt.value = c.systemPromptExtra || '';
+      // Build files list from config + actual files on disk (union)
+      const roleByFile = {};
+      for (const [role, file] of Object.entries(c.productImages || {})) {
+        if (file) roleByFile[file] = role;
+      }
+      const filesOnDisk = data.files || [];
+      const allFiles = new Set([...Object.values(c.productImages || {}), ...filesOnDisk]);
+      manage.files = [...allFiles].map(name => ({ name, role: roleByFile[name] || '' }));
+      renderManageImages();
+    } catch (err) {
+      manage.status.textContent = `Error: ${err.message}`;
+    }
+  }
+
+  manage.modal.classList.remove('hidden');
+}
+
+function renderManageImages() {
+  manage.imageCount.textContent = manage.files.length ? `${manage.files.length} image${manage.files.length === 1 ? '' : 's'}` : '';
+  if (!manage.files.length) {
+    manage.imageGrid.innerHTML = '<p class="text-dim" style="grid-column:1/-1;text-align:center;padding:20px">No images yet — upload some below.</p>';
+    return;
+  }
+  manage.imageGrid.innerHTML = manage.files.map((f, i) => {
+    const isMust = (f.role || '').toLowerCase().startsWith('must');
+    const src = manage.editingId
+      ? `/api/campaigns/${encodeURIComponent(manage.editingId)}/products`
+      : '';
+    return `
+      <div class="manage-image-card${isMust ? ' is-must' : ''}" data-i="${i}">
+        <div class="manage-image-thumb"><img src="${getThumbForFile(f.name)}" alt="${escapeHtml(f.name)}" /></div>
+        <div class="manage-image-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+        <input type="text" class="manage-image-role" data-i="${i}" value="${escapeHtml(f.role)}" placeholder="role (e.g. must1, optional_a)" />
+        <div class="manage-image-actions">
+          <label class="manage-must-toggle"><input type="checkbox" data-i="${i}" class="manage-must-cb" ${isMust ? 'checked' : ''}/> must-have</label>
+          <button class="btn btn-sm btn-danger manage-image-delete" data-i="${i}">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  manage.imageGrid.querySelectorAll('.manage-image-role').forEach(input => {
+    input.addEventListener('input', e => {
+      const i = +e.target.dataset.i;
+      manage.files[i].role = e.target.value;
+      // toggle must styling live
+      const card = e.target.closest('.manage-image-card');
+      const isMust = (e.target.value || '').toLowerCase().startsWith('must');
+      card.classList.toggle('is-must', isMust);
+      const cb = card.querySelector('.manage-must-cb');
+      if (cb) cb.checked = isMust;
+    });
+  });
+  manage.imageGrid.querySelectorAll('.manage-must-cb').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const i = +e.target.dataset.i;
+      const f = manage.files[i];
+      const checked = e.target.checked;
+      const currentIsMust = (f.role || '').toLowerCase().startsWith('must');
+      if (checked && !currentIsMust) {
+        f.role = `must_${(f.role || `img${i + 1}`).replace(/^must_?/i, '').replace(/[^a-zA-Z0-9_]+/g, '_') || `img${i + 1}`}`;
+      } else if (!checked && currentIsMust) {
+        f.role = f.role.replace(/^must_?/i, '') || `img${i + 1}`;
+      }
+      renderManageImages();
+    });
+  });
+  manage.imageGrid.querySelectorAll('.manage-image-delete').forEach(btn => {
+    btn.addEventListener('click', () => deleteManageImage(+btn.dataset.i));
+  });
+}
+
+function getThumbForFile(name) {
+  // For freshly uploaded local files, we keep an in-memory data URL
+  const local = manage._localUrls?.[name];
+  if (local) return local;
+  if (manage.editingId) {
+    return `/api/campaigns/${encodeURIComponent(manage.editingId)}/product-image/${encodeURIComponent(name)}`;
+  }
+  return '';
+}
+
+async function deleteManageImage(i) {
+  const f = manage.files[i];
+  if (!f) return;
+  if (!confirm(`Remove ${f.name}?`)) return;
+
+  if (manage.mode === 'edit' && manage.editingId) {
+    try {
+      const res = await fetch(`/api/campaigns/${encodeURIComponent(manage.editingId)}/images/${encodeURIComponent(f.name)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Delete failed');
+      }
+    } catch (err) {
+      manage.status.textContent = `Error: ${err.message}`;
+      return;
+    }
+  }
+  manage.files.splice(i, 1);
+  renderManageImages();
+}
+
+// Upload handlers
+manage.uploadArea.addEventListener('click', () => manage.uploadInput.click());
+manage.uploadArea.addEventListener('dragover', e => { e.preventDefault(); manage.uploadArea.classList.add('drag-active'); });
+manage.uploadArea.addEventListener('dragleave', () => manage.uploadArea.classList.remove('drag-active'));
+manage.uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  manage.uploadArea.classList.remove('drag-active');
+  handleManageUpload(e.dataTransfer.files);
+});
+manage.uploadInput.addEventListener('change', e => handleManageUpload(e.target.files));
+
+async function handleManageUpload(fileList) {
+  const files = [...(fileList || [])].filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+
+  // Pre-cache local URLs so the grid can show thumbs immediately
+  manage._localUrls = manage._localUrls || {};
+  for (const f of files) {
+    manage._localUrls[f.name] = URL.createObjectURL(f);
+  }
+
+  if (manage.mode === 'edit' && manage.editingId) {
+    // Upload immediately so files land in the bundled folder
+    manage.uploadStatus.classList.remove('hidden');
+    manage.uploadStatus.textContent = `Uploading ${files.length} file${files.length === 1 ? '' : 's'}…`;
+    try {
+      const fd = new FormData();
+      for (const f of files) fd.append('images', f, f.name);
+      const res = await fetch(`/api/campaigns/${encodeURIComponent(manage.editingId)}/images`, { method: 'POST', body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Upload failed');
+      }
+      const data = await res.json();
+      for (const name of data.written || []) {
+        if (!manage.files.find(x => x.name === name)) {
+          manage.files.push({ name, role: '' });
+        }
+      }
+      manage.uploadStatus.textContent = `Uploaded ${data.written?.length || 0} file${data.written?.length === 1 ? '' : 's'}.`;
+      renderManageImages();
+    } catch (err) {
+      manage.uploadStatus.textContent = `Error: ${err.message}`;
+    }
+  } else {
+    // Create mode — defer the upload until Save
+    manage._pendingUploads = manage._pendingUploads || [];
+    for (const f of files) {
+      manage._pendingUploads.push(f);
+      if (!manage.files.find(x => x.name === f.name)) manage.files.push({ name: f.name, role: '' });
+    }
+    manage.uploadStatus.classList.remove('hidden');
+    manage.uploadStatus.textContent = `${manage._pendingUploads.length} file${manage._pendingUploads.length === 1 ? '' : 's'} queued — will upload on Save.`;
+    renderManageImages();
+  }
+  manage.uploadInput.value = '';
+}
+
+// Save
+manage.save.addEventListener('click', async () => {
+  manage.status.textContent = '';
+  const id = (manage.id.value || '').trim();
+  const name = (manage.name.value || '').trim();
+  if (!id) return manage.status.textContent = 'Campaign ID is required';
+  if (!name) return manage.status.textContent = 'Display name is required';
+
+  // Build productImages map from current files
+  const productImages = {};
+  for (let i = 0; i < manage.files.length; i++) {
+    const f = manage.files[i];
+    const role = (f.role || '').trim() || `img${i + 1}`;
+    productImages[role] = f.name;
+  }
+
+  const payload = {
+    id,
+    name,
+    productSlug: (manage.slug.value || '').trim(),
+    defaultAspectRatio: manage.aspect.value,
+    defaultResolution: manage.res.value,
+    systemPromptExtra: manage.prompt.value,
+    productImages,
+  };
+
+  manage.save.disabled = true;
+  try {
+    if (manage.mode === 'create') {
+      // 1) Create the campaign config (this also creates the folder)
+      const res = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Create failed');
+      }
+
+      // 2) Upload pending images
+      const pending = manage._pendingUploads || [];
+      if (pending.length) {
+        const fd = new FormData();
+        for (const f of pending) fd.append('images', f, f.name);
+        // Pass roles parallel to files
+        const roles = pending.map(f => {
+          const entry = manage.files.find(x => x.name === f.name);
+          return entry?.role || '';
+        });
+        fd.append('roles', JSON.stringify(roles));
+        const upRes = await fetch(`/api/campaigns/${encodeURIComponent(id)}/images`, { method: 'POST', body: fd });
+        if (!upRes.ok) {
+          const err = await upRes.json().catch(() => ({}));
+          throw new Error(err.error || 'Image upload failed');
+        }
+      }
+
+      // 3) Re-PUT to ensure productImages map is canonical (in case roles were edited after queueing)
+      await fetch(`/api/campaigns/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      manage._pendingUploads = [];
+    } else {
+      // Edit: PUT
+      const res = await fetch(`/api/campaigns/${encodeURIComponent(manage.editingId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Update failed');
+      }
+    }
+
+    manage.status.textContent = 'Saved.';
+    await loadCampaigns();
+    if (manage.mode === 'create') els.campaignSelect.value = id;
+    else els.campaignSelect.value = manage.editingId;
+    els.campaignSelect.dispatchEvent(new Event('change'));
+    setTimeout(closeManageModal, 400);
+  } catch (err) {
+    manage.status.textContent = `Error: ${err.message}`;
+  } finally {
+    manage.save.disabled = false;
+  }
+});
+
+// Delete campaign
+manage.delete.addEventListener('click', async () => {
+  if (manage.mode !== 'edit' || !manage.editingId) return;
+  if (!confirm(`Delete campaign "${manage.editingId}"? Image files stay on disk.`)) return;
+  try {
+    const res = await fetch(`/api/campaigns/${encodeURIComponent(manage.editingId)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Delete failed');
+    }
+    await loadCampaigns();
+    els.campaignSelect.value = '';
+    els.campaignSelect.dispatchEvent(new Event('change'));
+    closeManageModal();
+  } catch (err) {
+    manage.status.textContent = `Error: ${err.message}`;
+  }
+});
+
+// Auto-derive slug from ID in create mode
+manage.id.addEventListener('input', () => {
+  if (manage.mode !== 'create') return;
+  if (!manage.slug.value) {
+    manage.slug.value = manage.id.value.toLowerCase().replace(/_/g, ' ').trim();
+  }
+});
+
 // Load campaigns on start
 loadCampaigns();
